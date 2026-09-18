@@ -8,7 +8,7 @@ Public player: https://glifocat.github.io/kinetic/
 
 GitHub Pages publishes the root of the `main` branch. Push changes to `main` to update the site. The downloaded reference clips and intermediate soundtrack are excluded from version control.
 
-Run `npm start`, then open http://127.0.0.1:4173. Use the ♪ control to enable sound (browsers require a user gesture). Pause, seek, select a chapter, or change playback speed. Reduced-motion preferences start the player paused.
+Run `npm start`, then open http://127.0.0.1:4173. The desktop player uses a wide diagram; phones and video exports use the portrait composition. Sound, export, and direct MP4 download controls remain available at every width. Use the **Sound off / Sound on** control to enable sound (browsers require a user gesture). Pause, seek, select a chapter, or change playback speed. Reduced-motion preferences start the player paused.
 
 ## Finished video
 
