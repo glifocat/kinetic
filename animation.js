@@ -1,112 +1,117 @@
 'use strict';
-const canvas=document.getElementById('film');let g=canvas.getContext('2d');
-const C={bg:'#0a1017',blue:'#92bfff',mint:'#93e0cb',purple:'#bba6ff',white:'#e6eef6',muted:'#778b9f',line:'#2b4052',gold:'#e1c691'};
-const TAU=Math.PI*2,DURATION=30;
-const chapters=[{t:0,title:'Receive & route',detail:'The channel adapter hands a message to the host.',caption:['One message arrives.','The host finds its session.']},{t:5,title:'Write the inbox',detail:'The host persists the message to the session’s inbound.db.',caption:['The host writes the inbox.','The message survives the handoff.']},{t:9,title:'Wake the container',detail:'The host wakes the container. The agent polls its inbox.',caption:['An isolated container wakes.','The agent reads its message.']},{t:13,title:'Reason → act → observe',detail:'The model client calls the hosted model through OneCLI. The proxy injects credentials outside the container; the runtime executes returned tool calls.',caption:['OneCLI adds credentials outside the agent.','The hosted model returns the next action.']},{t:22,title:'Write & deliver',detail:'The agent writes outbound.db. The host delivers through the channel adapter.',caption:['The agent writes the outbox.','The host carries the answer home.']},{t:27,title:'Ready for the next message',detail:'The host keeps listening. The next message starts another cycle.',caption:['Host orchestrates. Agent executes.','Two mailboxes connect the loop.']}];
+const canvas = document.getElementById('film');
+const viewer = document.getElementById('viewer');
+const DURATION = 18;
+const C = {bg:'#0a1017',line:'#344657',muted:'#97a8b8',white:'#e6eef6',blue:'#92bfff',mint:'#93e0cb',purple:'#bba6ff',gold:'#e1c691'};
+const chapters = [
+ {t:0,title:'A message arrives',detail:'The channel adapter passes an eligible message to the host, which resolves its session.',caption:'A message arrives. The host finds its session.'},
+ {t:3,title:'A durable handoff',detail:'The host persists the message in the session inbox and wakes or reuses its container.',caption:'Saved to the inbox. The agent wakes—or keeps running.'},
+ {t:6,title:'The agent works',detail:'The SDK calls the model through OneCLI, executes a local tool, then sends the result back for the next model response. This is one illustrative turn.',caption:'Ask the model. Run a tool. Read the result.'},
+ {t:14,title:'The answer returns',detail:'The agent writes its reply to the outbox. The host delivers it through the channel adapter.',caption:'The agent writes a reply. The host delivers it.'}
+];
 let time=0,playing=!matchMedia('(prefers-reduced-motion: reduce)').matches,speed=1,prev=performance.now(),recording=false,lastChapter=-1;
-const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n)),ease=x=>{x=clamp(x);return x*x*(3-2*x)},phase=(t,a,b)=>clamp((t-a)/(b-a));
-function line(points,color=C.line,width=2,dash=[]){g.save();g.beginPath();points.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));g.strokeStyle=color;g.lineWidth=width;g.setLineDash(dash);g.stroke();g.restore()}
-function circle(x,y,r,color,width=2,fill){g.beginPath();g.arc(x,y,r,0,TAU);if(fill){g.fillStyle=fill;g.fill()}if(color){g.strokeStyle=color;g.lineWidth=width;g.stroke()}}
-function text(s,x,y,size=24,color=C.white,align='center',font='mono'){g.fillStyle=color;g.font=`${font==='display'?'500':'400'} ${size}px ${font==='display'?'"Space Grotesk", sans-serif':'ui-monospace, SFMono-Regular, monospace'}`;g.textAlign=align;g.textBaseline='middle';g.fillText(s,x,y)}
-function box(x,y,w,h,r=12,stroke=C.line,fill=C.bg){g.beginPath();g.roundRect(x,y,w,h,r);g.fillStyle=fill;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=2;g.stroke()}}
-function glow(fn,color,amount=20){g.save();g.shadowColor=color;g.shadowBlur=amount;fn();g.restore()}
-function dot(x,y,color,r=7){glow(()=>circle(x,y,r,null,0,color),color,24)}
-function polyPoint(points,p){const lens=points.slice(1).map((v,i)=>Math.hypot(v[0]-points[i][0],v[1]-points[i][1]));let left=p*lens.reduce((a,b)=>a+b,0);for(let i=0;i<lens.length;i++){if(left<=lens[i]||i===lens.length-1){const q=left/lens[i];return [points[i][0]+(points[i+1][0]-points[i][0])*q,points[i][1]+(points[i+1][1]-points[i][1])*q]}left-=lens[i]}return points[0]}
-function packet(points,p,color){if(p<=0||p>=1)return;for(let i=12;i>=0;i--){const q=Math.max(0,p-i*.006),v=polyPoint(points,q);g.save();g.globalAlpha=(1-i/13)*.85;dot(...v,color,i===0?8:3);g.restore()}}
-function screw(x,y){circle(x,y,4,C.line,1);line([[x-2,y],[x+2,y]],C.muted,1)}
-function chip(x,y,label,active,color=C.blue){box(x-83,y-29,166,58,12,active?color:C.line);if(active)glow(()=>box(x-79,y-25,158,50,9,color),color,13);text(label,x,y,20,active?color:C.muted);for(let i=-2;i<=2;i++){line([[x+i*24,y-36],[x+i*24,y-30]],C.line);line([[x+i*24,y+30],[x+i*24,y+36]],C.line)}}
-function gear(x,y,r,t,color,active){g.save();g.translate(x,y);g.rotate(t);for(let i=0;i<36;i++){const a=i*TAU/36;line([[Math.cos(a)*(r+4),Math.sin(a)*(r+4)],[Math.cos(a)*(r+(i%3===0?17:10)),Math.sin(a)*(r+(i%3===0?17:10))]],active?color:C.line,2)}circle(0,0,r,active?color:C.line,2);circle(0,0,r-10,C.line,1);for(let i=0;i<3;i++){g.save();g.rotate(i*TAU/3);g.beginPath();g.arc(0,0,r-25,-.15,1.2);g.lineTo(15,10);g.strokeStyle=color;g.globalAlpha=active?.8:.25;g.lineWidth=5;g.stroke();g.restore()}g.restore();circle(x,y,24,color,2);dot(x,y,color,7)}
-function database(x,y,label,count,color,active){box(x-94,y-81,188,164,8,active?color:C.line);line([[x-82,y-64],[x-82,y+68]],C.line,2);line([[x+82,y-64],[x+82,y+68]],C.line,2);for(let i=0;i<4;i++){const yy=y+48-i*33;box(x-68,yy-12,136,24,4,i<count?color:C.line,i<count?color+'18':C.bg);if(i<count){text(i===0?'MESSAGE':'CONTEXT',x,yy,13,color);for(let k=0;k<3;k++)circle(x+43+k*6,yy,1,null,0,color)}}screw(x-85,y-72);screw(x+85,y-72);text(label,x,y+111,23,color);text('SQLITE · 1 WRITER',x,y+140,14,C.muted)}
-function render(t){g.clearRect(0,0,1080,1920);g.fillStyle=C.bg;g.fillRect(0,0,1080,1920);const grad=g.createRadialGradient(540,970,60,540,970,900);grad.addColorStop(0,'#14233466');grad.addColorStop(1,'#0a101700');g.fillStyle=grad;g.fillRect(0,0,1080,1920);g.fillStyle='#203144';for(let x=45;x<1080;x+=36)for(let y=70;y<1870;y+=36){g.globalAlpha=.32;g.fillRect(x,y,1.5,1.5)}g.globalAlpha=1;
-text('K I N E T I C   /   S Y S T E M S   I N   M O T I O N',540,130,16,C.muted);text('NanoClaw',540,206,70,C.white,'center','display');text('The host agent loop',540,278,41,C.mint,'center','display');text('ONE MESSAGE  →  ONE COMPLETE ROUND TRIP',540,332,17,C.muted);
-const s=chapters.reduce((a,c,i)=>t>=c.t?i:a,0),activeHost=t<9||t>24;box(382,378,316,43,22,C.line);dot(406,399,s===3?C.purple:C.mint,4);text(['RECEIVE & ROUTE','WRITE INBOUND','WAKE & READ','REASON · ACT · OBSERVE','WRITE & DELIVER','LISTENING AGAIN'][s],552,400,15,C.muted);
-// Keep room below the container for the external credential and model path.
-g.save();
-// Channel rail and message envelope.
-const top=[[540,512],[540,624]];line(top);chip(540,478,t>=26?'REPLY SENT':'CHAT APP',t<3||t>=26,C.mint);text('channel adapter',540,551,17,C.muted);packet(top,phase(t,1,3),C.mint);
-// Host rotor.
-gear(540,746,104,t*.28,C.blue,activeHost);text('HOST',540,746,19,C.white);text('NODE PROCESS',540,886,18,C.blue);text('route · wake · deliver',540,918,18,C.muted);
-text('RECEIVED',174,655,16,C.muted);text(t<1?'00':'01',174,703,48,C.blue);line([[100,743],[248,743]],C.line);text('DELIVERED',901,655,16,C.muted);text(t<26?'00':'01',901,703,48,C.mint);line([[827,743],[975,743]],C.line);
-const inPath=[[442,746],[245,746],[245,917]],outPath=[[835,917],[835,746],[638,746]];line(inPath,C.line,2,[5,8]);line(outPath,C.line,2,[5,8]);packet(inPath,phase(t,4,6),C.blue);packet(outPath,phase(t,24,26),C.mint);
-text('HOST WRITES',245,857,16,C.blue);text('HOST READS',835,857,16,C.mint);database(245,1004,'inbound.db',t>=6&&t<12?1:0,C.blue,t>=5&&t<13);database(835,1004,'outbound.db',t>=23&&t<26?1:0,C.mint,t>=22&&t<27);
-// Isolated agent enclosure.
-box(119,1210,842,402,20,t>=9&&t<25?'#516379':C.line,'#0c141e');g.save();g.setLineDash([6,8]);box(131,1222,818,378,15,C.line,'#0c141e');g.restore();box(364,1192,352,38,10,C.line);text('ISOLATED AGENT CONTAINER',540,1211,18,C.purple);text('BUN RUNTIME · AGENT SDK',540,1578,16,C.muted);
-const into=[[245,1159],[245,1329],[383,1329]],outof=[[697,1329],[835,1329],[835,1159]];line(into,C.line,2,[5,8]);line(outof,C.line,2,[5,8]);packet(into,phase(t,10,12),C.blue);packet(outof,phase(t,22,23.5),C.mint);
-text('POLL',245,1280,16,C.blue);text('WRITE',835,1280,16,C.mint);
-const mx=430,my=1371,tx=660,ty=1450;circle(mx,my,72,C.line);circle(mx,my,63,t>=12&&t<22?C.purple:C.line,2,'#171c30');text('MODEL',mx,my-12,20,C.purple);text('CLIENT',mx,my+12,20,C.purple);text('SDK',mx,my+39,14,C.muted);circle(tx,ty,61,C.line);gear(tx,ty,49,-t*.6,C.mint,t>=13&&t<22);text('TOOLS',tx,ty+85,18,C.mint);
-const req=[[470,1316],[552,1281],[663,1311],[688,1389]],res=[[612,1491],[540,1515],[455,1487],[423,1443]];line(req,C.line,2,[5,7]);line(res,C.line,2,[5,7]);text('tool request',596,1261,14,C.purple);text('result → context',488,1541,14,C.mint);
-let tools=Math.min(3,Math.max(0,Math.floor((t-13)/3)));if(t>=13&&t<22){const p=((t-13)%3)/3;packet(req,phase(p,.5,.70),C.purple);packet(res,phase(p,.73,.98),C.mint);const names=['READ FILE','RUN TOOL','CHECK RESULT'];box(718,1440,198,43,8,C.line);text(names[tools],817,1462,16,C.mint)}
-// Context memory cells on the left.
-text('CONTEXT',245,1412,15,C.muted);for(let i=0;i<4;i++){box(177,1436+i*27,136,18,3,i<=tools&&t>=12?C.purple:C.line,i<=tools&&t>=12?'#bba6ff14':C.bg)}
-// Wake signal.
-if(t>=9&&t<11){g.save();g.globalAlpha=1-phase(t,9,11);const r=phase(t,9,11)*90;glow(()=>circle(540,1210,r,C.blue,2),C.blue);g.restore()}
-if(t>=26){packet([[835,746],[915,746],[915,478],[623,478]],phase(t,26,27.5),C.mint)}
-g.restore();
-credentialFlow(t,{client:[[358,1371],[88,1371],[88,1688],[180,1688]],proxy:[180,1640,330,96],provider:[680,1640,285,96],bridge:[[510,1688],[680,1688]]});
-text('RAW API KEYS STAY OUTSIDE THE AGENT',540,1753,17,C.gold);
-const cap=chapters[s].caption;box(98,1780,884,102,20,C.line,'#0d151f');text(cap[0],540,1814,28,C.white,'center','display');text(cap[1],540,1853,24,C.muted,'center','display');g.fillStyle=C.mint;g.fillRect(0,1915,1080*t/30,5);
-if(s!==lastChapter){document.getElementById('stage-title').textContent=chapters[s].title;document.getElementById('stage-detail').textContent=chapters[s].detail;document.querySelectorAll('#chapters button').forEach((b,i)=>{b.classList.toggle('active',i===s);b.setAttribute('aria-current',i===s?'step':'false')});lastChapter=s}renderWide(t);document.getElementById('scrub').value=t;document.getElementById('clock').textContent=`00:${String(Math.floor(t)).padStart(2,'0')} / 00:30`;
+const clamp=(v)=>Math.max(0,Math.min(1,v));
+const phase=(t,a,b)=>clamp((t-a)/(b-a));
+const ease=v=>{v=clamp(v);return v*v*(3-2*v)};
+function drawScene(ctx,t,portrait){
+ const w=portrait?1080:1440,h=portrait?1920:900;
+ const x=portrait?[180,540,900]:[240,720,1200],y=portrait?720:335,r=portrait?76:68;
+ const detailY=portrait?1160:620;
+ const active=t<1.8?0:t<5?1:t<15.4?2:t<17?1:0;
+ const act=chapters.reduce((a,c,i)=>t>=c.t?i:a,0);
+ ctx.fillStyle=C.bg;ctx.fillRect(0,0,w,h);
+ const gradient=ctx.createRadialGradient(w/2,y,0,w/2,y,w*.6);gradient.addColorStop(0,'#17263866');gradient.addColorStop(1,'#0a101700');ctx.fillStyle=gradient;ctx.fillRect(0,0,w,h);
+ function label(s,xx,yy,size=24,color=C.white,align='center',mono=false){ctx.fillStyle=color;ctx.font=`400 ${size}px ${mono?'ui-monospace, monospace':'"Space Grotesk", sans-serif'}`;ctx.textAlign=align;ctx.textBaseline='middle';ctx.fillText(s,xx,yy)}
+ function path(points,color=C.line,width=2){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.lineWidth=width;ctx.strokeStyle=color;ctx.stroke()}
+ function ring(xx,yy,rr,color,width=2){ctx.beginPath();ctx.arc(xx,yy,rr,0,Math.PI*2);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke()}
+ function dot(xx,yy,color,radius=7){ctx.save();ctx.shadowColor=color;ctx.shadowBlur=24;ctx.beginPath();ctx.arc(xx,yy,radius,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.restore()}
+ function box(xx,yy,bw,bh,color=C.line){ctx.beginPath();ctx.roundRect(xx,yy,bw,bh,14);ctx.fillStyle='#101a24';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=color;ctx.stroke()}
+ function travel(a,b,p,color){if(p<=0||p>=1)return;for(let i=8;i>=0;i--){let q=clamp(p-i*.012);ctx.save();ctx.globalAlpha=1-i/9;dot(a[0]+(b[0]-a[0])*q,a[1]+(b[1]-a[1])*q,color,i?3:8);ctx.restore()}}
+ function reveal(a,b){return ease((t-a)/.3)*(1-ease((t-b)/.3))}
+ label('K I N E T I C   /   0 0 1',w/2,portrait?160:52,portrait?21:15,C.muted);
+ label('One message. One loop.',w/2,portrait?250:108,portrait?58:42);
+ label('Inside NanoClaw',w/2,portrait?330:155,portrait?32:23,C.mint);
+ // Three anchors stay in place. Only the active mechanism is revealed.
+ ctx.save();ctx.globalAlpha=t>=6&&t<14?.22:.8;
+ path([[x[0]+r,y],[x[1]-r,y]]);path([[x[1]+r,y],[x[2]-r,y]]);ctx.restore();
+ const colors=[C.mint,C.blue,C.purple];
+ x.forEach((xx,i)=>{const on=i===active;ctx.save();ctx.globalAlpha=on?1:.48;
+ ring(xx,y,r,on?colors[i]:C.line,2);ring(xx,y,r-10,C.line,1);
+ for(let k=0;k<24;k++){const a=k*Math.PI/12;path([[xx+Math.cos(a)*(r+5),y+Math.sin(a)*(r+5)],[xx+Math.cos(a)*(r+(k%3?9:15)),y+Math.sin(a)*(r+(k%3?9:15))]],on?colors[i]:C.line,1)}
+ if(on){ctx.save();ctx.translate(xx,y);ctx.rotate(t*.5);ctx.beginPath();ctx.arc(0,0,r-19,0,Math.PI*.6);ctx.strokeStyle=colors[i];ctx.lineWidth=3;ctx.stroke();ctx.restore()}
+ if(i===0){box(xx-27,y-19,54,38,colors[i]);path([[xx-24,y-14],[xx,y+2],[xx+24,y-14]],colors[i]);}
+ if(i===1){for(let k=0;k<3;k++){const a=k*Math.PI*2/3+t*.3;path([[xx,y],[xx+Math.cos(a)*34,y+Math.sin(a)*34]],colors[i],3)}dot(xx,y,colors[i],6)}
+ if(i===2){ring(xx,y,24,colors[i]);dot(xx,y,colors[i],7)}
+ label(['Chat','Host','Agent'][i],xx,y+r+57,portrait?40:32,on?C.white:C.muted);
+ ctx.restore();});
+ travel([x[0]+r,y],[x[1]-r,y],phase(t,.7,1.8),C.mint);
+ travel([x[1]+r,y],[x[2]-r,y],phase(t,4.4,5.5),C.blue);
+ travel([x[2]-r,y],[x[1]+r,y],phase(t,14.7,15.6),C.mint);
+ travel([x[1]-r,y],[x[0]+r,y],phase(t,16,17),C.mint);
+ // Durable mailboxes are short handoff details, not permanent queue towers.
+ function mailbox(name,status,alpha){if(alpha<=0)return;ctx.save();ctx.globalAlpha=alpha;
+ box(w/2-185,detailY-44,370,88,name==='Inbox'?C.blue:C.mint);
+ label(name,w/2-130,detailY,portrait?32:26,C.white,'left');label(status,w/2+145,detailY,portrait?24:19,C.mint,'right',true);
+ label(name==='Inbox'?'Host writes · agent reads':'Agent writes · host reads',w/2,detailY+88,portrait?25:21,C.muted);
+ ctx.restore();}
+ mailbox('Inbox',t<4.2?'SAVED':'READY',reveal(3,5.6));
+ mailbox('Outbox',t<15.6?'SAVED':'DELIVERED',reveal(14,16.4));
+ // Focus on credentialed inference only during the request/response.
+ const modelAlpha=Math.max(reveal(6,8.8),reveal(11,13.7));
+ if(modelAlpha>0){ctx.save();ctx.globalAlpha=modelAlpha;
+ const gx=w/2,spread=portrait?300:350,yy=detailY;
+ label(t<10?'Ask the model':'Send the tool result',gx,yy-(portrait?155:110),portrait?36:28,C.purple);
+ const anchors=[gx-spread,gx,gx+spread];
+ path([[anchors[0]+60,yy],[anchors[2]-60,yy]],C.line);
+ // The small gate sits on the boundary; it is not another machine-sized box.
+ box(gx-58,yy-48,116,96,C.gold);ring(gx,yy-7,14,C.gold);path([[gx,yy+7],[gx,yy+23]],C.gold,3);
+ ring(anchors[0],yy,49,C.purple);ring(anchors[2],yy,49,C.purple);
+ label('SDK',anchors[0],yy,portrait?26:23,C.purple);label('API',anchors[2],yy,portrait?26:23,C.purple);
+ label('Agent',anchors[0],yy+94,portrait?27:23);label('OneCLI',gx,yy+94,portrait?27:23,C.gold);label('Model',anchors[2],yy+94,portrait?27:23);
+ label('Credentials added here',gx,yy+142,portrait?23:18,C.muted);
+ const local=t<10?t-6:t-11;
+ if(local<.75)travel([anchors[0]+49,yy],[gx-58,yy],phase(local,.15,.75),C.purple);
+ else if(local<1.25)travel([gx+58,yy],[anchors[2]-49,yy],phase(local,.75,1.25),C.gold);
+ else if(local<1.85)travel([anchors[2]-49,yy],[gx+58,yy],phase(local,1.3,1.85),C.purple);
+ else travel([gx-58,yy],[anchors[0]+49,yy],phase(local,1.85,2.45),C.purple);
+ ctx.restore();}
+ const toolAlpha=reveal(9,10.7);
+ if(toolAlpha>0){ctx.save();ctx.globalAlpha=toolAlpha;
+ label('One local tool call',w/2,detailY-(portrait?135:110),portrait?36:28,C.mint);
+ box(w/2-180,detailY-45,360,90,C.mint);label(t<10?'READ FILE':'RESULT READY',w/2,detailY,portrait?30:25,C.mint,'center',true);
+ label('Runs inside the container',w/2,detailY+94,portrait?26:21,C.muted);
+ ctx.restore();}
+ if(t>=17){ctx.save();ctx.globalAlpha=ease((t-17)/.3);label('Reply delivered',w/2,detailY,portrait?42:32,C.mint);ctx.restore()}
+ if(t<3){ctx.save();ctx.globalAlpha=reveal(.2,2.6);label('Find the right session',w/2,detailY,portrait?36:28,C.blue);ctx.restore()}
+ const caption=chapters[act].caption;
+ // Two short lines in portrait; a single line on desktop.
+ if(portrait){const lines=[['A message arrives.','The host finds its session.'],['Saved to the inbox.','The agent wakes—or keeps running.'],['Ask the model. Run a tool.','Read the result.'],['The agent writes a reply.','The host delivers it.']][act];label(lines[0],w/2,1650,34);label(lines[1],w/2,1705,30,C.muted);}
+ else label(caption,w/2,843,24,C.white);
+ label('ONE ILLUSTRATIVE SESSION',w/2,portrait?1815:885,portrait?19:13,C.muted,'center',true);
+ ctx.fillStyle=C.mint;ctx.fillRect(0,h-4,w*t/DURATION,4);
 }
-// The web player uses a wide composition; video exports retain the portrait master.
-const viewer=document.getElementById('viewer');
-function renderWide(t){if(!viewer||matchMedia('(max-width: 800px)').matches)return;const portrait=g;g=viewer.getContext('2d');g.fillStyle=C.bg;g.fillRect(0,0,1440,1000);
-text('NanoClaw',72,76,44,C.white,'left','display');text('The host agent loop',72,123,25,C.mint,'left','display');text('ONE MESSAGE · TWO MAILBOXES',1368,83,18,C.muted,'right');
-const s=chapters.reduce((a,c,i)=>t>=c.t?i:a,0);text(['RECEIVE & ROUTE','WRITE INBOUND','WAKE & READ','REASON · ACT · OBSERVE','WRITE & DELIVER','LISTENING AGAIN'][s],1368,121,18,C.mint,'right');
-line([[72,165],[1368,165]],C.line);
-chip(280,251,t>=27.5?'REPLY SENT':'CHAT APP',t<3||t>=26,C.mint);text('channel adapter',280,305,20,C.muted);line([[280,320],[280,399]],C.line);packet([[280,320],[280,399]],phase(t,1,3),C.mint);
-gear(280,510,108,t*.28,C.blue,t<9||t>24);text('HOST',280,548,21,C.blue);text('route · wake · deliver',280,667,22,C.muted);
-const ip=[[392,480],[516,480],[516,339],[604,339]],op=[[604,673],[516,673],[516,549],[392,549]];line(ip,C.line,2,[6,8]);line(op,C.line,2,[6,8]);packet(ip,phase(t,4,6),C.blue);packet(op,phase(t,24,26),C.mint);
-database(698,338,'inbound.db',t>=6&&t<12?1:0,C.blue,t>=5&&t<13);database(698,672,'outbound.db',t>=23&&t<26?1:0,C.mint,t>=22&&t<27);text('HOST WRITES',698,220,20,C.blue);text('AGENT WRITES',698,555,20,C.mint);
-box(899,225,465,581,20,C.line,'#0c141e');text('ISOLATED AGENT',1132,264,23,C.purple);text('BUN RUNTIME · AGENT SDK',1132,298,17,C.muted);
-const inward=[[792,338],[972,338],[972,407],[1048,407]],outward=[[1048,716],[861,716],[861,672],[792,672]];line(inward,C.line,2,[6,8]);line(outward,C.line,2,[6,8]);packet(inward,phase(t,10,12),C.blue);packet(outward,phase(t,22,23.5),C.mint);
-circle(1116,407,66,t>=12&&t<22?C.purple:C.line,2,'#171c30');text('MODEL',1116,393,22,C.purple);text('CLIENT',1116,420,22,C.purple);
-gear(1198,630,51,-t*.6,C.mint,t>=13&&t<22);text('TOOLS',1198,709,21,C.mint);
-const req=[[1180,407],[1297,452],[1297,560],[1237,590]],res=[[1147,637],[1048,637],[1003,549],[1078,461]];line(req,C.line,2,[5,7]);line(res,C.line,2,[5,7]);text('request',1296,491,18,C.purple);text('result',1030,580,18,C.mint);
-let n=Math.min(3,Math.max(0,Math.floor((t-13)/3)));if(t>=13&&t<22){const p=((t-13)%3)/3;packet(req,phase(p,.5,.70),C.purple);packet(res,phase(p,.73,.98),C.mint);text(['READ FILE','RUN TOOL','CHECK RESULT'][n],1132,765,21,C.mint)}
-for(let i=0;i<4;i++)box(927,670+i*25,97,17,3,i<=n&&t>=12?C.purple:C.line);text('context',975,782,18,C.muted);
-text('RECEIVED',185,752,18,C.muted);text(t<1?'00':'01',185,793,38,C.blue);text('DELIVERED',365,752,18,C.muted);text(t<27.5?'00':'01',365,793,38,C.mint);
-if(t>=26)packet([[280,399],[280,320]],phase(t,26,27.5),C.mint);
-if(t>=9&&t<11){g.save();g.globalAlpha=1-phase(t,9,11);circle(1132,265,phase(t,9,11)*80,C.blue);g.restore()}
-credentialFlow(t,{client:[[1182,407],[1390,407],[1390,869],[1260,869]],proxy:[960,827,300,84],provider:[550,827,280,84],bridge:[[960,869],[830,869]]});
-text('KEYS STAY OUTSIDE',72,855,20,C.gold,'left');text('Credentials injected at the proxy',72,887,18,C.muted,'left');
-box(72,934,1296,48,13,C.line,'#0d151f');text(chapters[s].caption.join(' '),720,959,22,C.white,'center','display');g.fillStyle=C.mint;g.fillRect(0,996,1440*t/30,4);g=portrait;
+function render(t){drawScene(canvas.getContext('2d'),t,true);if(viewer&&!matchMedia('(max-width: 800px)').matches)drawScene(viewer.getContext('2d'),t,false);
+ const s=chapters.reduce((a,c,i)=>t>=c.t?i:a,0);
+ if(s!==lastChapter){document.getElementById('stage-title').textContent=chapters[s].title;document.getElementById('stage-detail').textContent=chapters[s].detail;document.querySelectorAll('#chapters button').forEach((b,i)=>{b.classList.toggle('active',i===s);b.setAttribute('aria-current',i===s?'step':'false')});lastChapter=s}
+ document.getElementById('scrub').value=t;document.getElementById('clock').textContent=`00:${String(Math.floor(t)).padStart(2,'0')} / 00:18`;
 }
-// Credential injection is on the outbound API path, outside the agent container.
-function credentialFlow(t,{client,proxy,provider,bridge}){
-const active=t>=13&&t<22,p=active?((t-13)%3)/3:-1;
-line(client,C.line,2,[5,7]);line(bridge,C.line,2,[5,7]);
-const [x,y,w,h]=proxy,[px,py,pw,ph]=provider;
-box(x,y,w,h,14,active?C.gold:C.line,'#1b1914');
-text('OneCLI',x+w/2,y+20,24,C.gold,'center','display');
-text('CREDENTIAL PROXY',x+w/2,y+44,17,C.gold);
-text('policy · inject key',x+w/2,y+68,16,C.muted);
-box(px,py,pw,ph,14,active?C.purple:C.line,'#171c30');
-text('HOSTED MODEL',px+pw/2,py+28,22,C.purple);
-text('API provider',px+pw/2,py+59,18,C.muted);
-if(active){packet(client,phase(p,0,.14),C.purple);packet(bridge,phase(p,.14,.25),C.gold);packet([...bridge].reverse(),phase(p,.30,.40),C.purple);packet([...client].reverse(),phase(p,.40,.5),C.purple);if(p>.13&&p<.22)dot(x+w-18,y+18,C.gold,5);}
-}
-// Original sound score. All effects share the animation clock.
 let audioCtx,master,recordDest,audioSource,soundOn=false,scoreBuffer;
 const soundButton=document.createElement('button');soundButton.id='sound';soundButton.textContent='♪ Sound off';soundButton.title='Enable sound';soundButton.setAttribute('aria-label','Enable sound');soundButton.setAttribute('aria-pressed','false');document.querySelector('.transport').insertBefore(soundButton,document.getElementById('clock'));
-function makeScore(ctx){const sr=ctx.sampleRate,b=ctx.createBuffer(2,sr*DURATION,sr),L=b.getChannelData(0),R=b.getChannelData(1);let seed=421;function rnd(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296*2-1}
-function tone(at,dur,freq,amp,pan=0,kind='sine',end=freq){const start=Math.floor(at*sr),len=Math.floor(dur*sr);let ph=0;for(let i=0;i<len&&start+i<L.length;i++){const t=i/sr,p=i/len;ph+=TAU*(freq+(end-freq)*p)/sr;let v=kind==='noise'?rnd():Math.sin(ph)+(kind==='bell'?.32*Math.sin(ph*2.76)*Math.exp(-t*14):0);v*=amp*Math.min(1,t/.006)*Math.exp(-t/(dur*.24))*(1-p);L[start+i]+=v*Math.sqrt((1-pan)/2);R[start+i]+=v*Math.sqrt((1+pan)/2)}}
-function whoosh(at,dur,pan){const start=Math.floor(at*sr),len=Math.floor(dur*sr);let low=0;for(let i=0;i<len&&start+i<L.length;i++){const p=i/len;low=low*.91+rnd()*.09;const v=low*Math.sin(Math.PI*p)**2*.22;const sweep=pan*(p*2-1);L[start+i]+=v*Math.sqrt((1-sweep)/2);R[start+i]+=v*Math.sqrt((1+sweep)/2)}}
-[1.8,4.7,9.5,11,13,16,19,22.3,24.6,26.3].forEach((t,i)=>whoosh(t,.7,i%2?-.8:.8));
-// Low, unobtrusive harmonic bed and a gentle tactile pulse.
-for(let i=0;i<L.length;i++){let t=i/sr,env=Math.min(1,t/1.5,(30-t)/1.5);const v=(Math.sin(TAU*55*t)*.012+Math.sin(TAU*82.4069*t)*.007+Math.sin(TAU*110*t)*.003)*env;L[i]+=v;R[i]+=v}
-for(let t=.5;t<29.5;t+=.5)tone(t,.035,1800,.024,Math.sin(t)*.5,'noise');
-// Arrival, routing ticks, mailbox latch, wake, then request/result pairs.
-tone(1,.7,659.25,.19,-.3,'bell');tone(1.12,.7,987.77,.12,.3,'bell');for(let t=3;t<5;t+=.25)tone(t,.09,420,.08,-.3,'sine',180);tone(6,.24,140,.25,-.65,'sine',62);tone(6,.08,2000,.065,-.65,'noise');tone(9,1.1,110,.14,0,'sine',330);tone(12,.5,523.25,.13,-.3,'bell');
-for(let i=0;i<3;i++){let t=13+i*3;tone(t,.5,330+i*55,.13,-.25,'sine',700+i*110);tone(t+.42,.07,1300,.075,.2,'noise');tone(t+1.5,.055,1500,.12,.6,'noise');tone(t+1.5,.5,880+i*110,.12,.35,'bell');tone(t+2.8,.2,220,.1,-.4,'sine',110)}tone(23,.28,150,.22,.65,'sine',60);tone(24,.8,440,.10,.5,'sine',880);[523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(26+i*.11,1.3,f,.14,(i-1.5)*.22,'bell'));tone(28,.65,261.63,.08,0,'bell');return b}
+function makeScore(ctx){const sr=ctx.sampleRate,b=ctx.createBuffer(2,sr*DURATION,sr),L=b.getChannelData(0),R=b.getChannelData(1);let seed=421;function random(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296*2-1}
+ function tone(at,dur,f,amp,pan=0,noise=false,end=f){let ph=0,low=0;for(let i=0;i<dur*sr;i++){const j=Math.floor(at*sr)+i;if(j>=L.length)break;const q=i/(dur*sr),tt=i/sr;ph+=Math.PI*2*(f+(end-f)*q)/sr;low=.85*low+.15*random();const v=(noise?low:Math.sin(ph)) *amp*Math.min(1,tt/.006)*Math.exp(-tt/(dur*.25))*(1-q);L[j]+=v*Math.sqrt((1-pan)/2);R[j]+=v*Math.sqrt((1+pan)/2)}}
+ tone(.7,.3,680,.17,-.6);tone(1.8,.1,240,.16);tone(3.1,.13,140,.25);tone(4.4,.35,330,.12,0,false,600);tone(5.5,.3,510,.12,.6);
+ for(const t of [6,11]){tone(t+.15,.28,380,.10,-.6,false,600);tone(t+.75,.07,1800,.15,0,true);tone(t+1.25,.25,760,.11,.6);tone(t+1.85,.3,580,.11,.2,false,380)}
+ tone(9.3,.055,1500,.17,0,true);tone(10,.2,440,.12);tone(14.15,.15,160,.2,.6);tone(15.6,.12,230,.12);tone(16,.35,620,.1,0,false,420);[523,659,784].forEach((f,i)=>tone(17+i*.09,.65,f,.12,(i-1)*.4));return b;
+}
 async function initAudio(){if(!audioCtx){audioCtx=new AudioContext();master=audioCtx.createGain();master.gain.value=.8;master.connect(audioCtx.destination);recordDest=audioCtx.createMediaStreamDestination();master.connect(recordDest);scoreBuffer=makeScore(audioCtx)}await audioCtx.resume()}
 function stopAudio(){if(audioSource){audioSource.stop();audioSource.disconnect();audioSource=null}}
-function syncAudio(){stopAudio();if(audioCtx&&soundOn&&playing){audioSource=audioCtx.createBufferSource();audioSource.buffer=scoreBuffer;audioSource.playbackRate.value=speed;audioSource.connect(master);audioSource.start(0,Math.min(time,29.99))}}
+function syncAudio(){stopAudio();if(audioCtx&&soundOn&&playing){audioSource=audioCtx.createBufferSource();audioSource.buffer=scoreBuffer;audioSource.playbackRate.value=speed;audioSource.connect(master);audioSource.start(0,Math.min(time,DURATION-.01))}}
 soundButton.onclick=async()=>{await initAudio();soundOn=!soundOn;soundButton.setAttribute('aria-pressed',String(soundOn));soundButton.textContent=soundOn?'♪ Sound on':'♪ Sound off';document.getElementById('export-status').textContent=soundOn?'Sound on · synchronized with playback':'Sound off · enable it for the full experience';soundButton.setAttribute('aria-label',soundOn?'Mute sound':'Enable sound');soundButton.style.color=soundOn?C.mint:'';soundButton.title=soundOn?'Mute sound':'Enable sound';syncAudio()};
 function setPlaying(v){playing=v;document.getElementById('play').textContent=v?'Ⅱ':'▶';document.getElementById('play').setAttribute('aria-label',v?'Pause animation':'Play animation');syncAudio()}
 chapters.forEach((c,i)=>{const li=document.createElement('li'),b=document.createElement('button');b.innerHTML=`<span>0${i+1}</span>${c.title}`;b.onclick=()=>{time=c.t;syncAudio();render(time)};li.append(b);document.getElementById('chapters').append(li)});
 document.getElementById('play').onclick=()=>setPlaying(!playing);document.getElementById('restart').onclick=()=>{time=0;setPlaying(true)};document.getElementById('speed').onchange=e=>{speed=+e.target.value;syncAudio()};document.getElementById('scrub').oninput=e=>{time=+e.target.value;syncAudio();render(time)};
 document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target===document.body){e.preventDefault();setPlaying(!playing)}});
 let finishRecording;
-function frame(now){const delta=Math.min((now-prev)/1000,.1);prev=now;if(playing){time+=delta*speed;if(time>=DURATION){if(recording){time=29.999;render(time);finishRecording();return requestAnimationFrame(frame)}time%=DURATION;syncAudio()}}render(time);requestAnimationFrame(frame)}
-document.getElementById('export').onclick=async()=>{const btn=document.getElementById('export'),status=document.getElementById('export-status');if(!canvas.captureStream||!window.MediaRecorder){status.textContent='Video export is unavailable in this browser.';return}await initAudio();const formats=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];const mimeType=formats.find(f=>MediaRecorder.isTypeSupported(f));if(!mimeType){status.textContent='WebM export is unavailable in this browser.';return}const old={time,playing,speed,soundOn};stopAudio();time=0;speed=1;soundOn=true;playing=true;recording=true;btn.disabled=true;document.querySelectorAll('.transport button,#scrub,.transport select,#chapters button').forEach(x=>x.disabled=true);status.textContent='Recording picture + sound… 30 seconds';const stream=canvas.captureStream(30);recordDest.stream.getAudioTracks().forEach(track=>stream.addTrack(track));const rec=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:8000000,audioBitsPerSecond:192000});const chunks=[];rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};const restore=()=>{recording=false;stopAudio();stream.getVideoTracks().forEach(track=>track.stop());({time,playing,speed,soundOn}=old);document.querySelectorAll('.transport button,#scrub,.transport select,#chapters button').forEach(x=>x.disabled=false);btn.disabled=false;setPlaying(playing)};rec.onerror=()=>{status.textContent='Export failed. Please try again.';restore()};rec.onstop=()=>{const url=URL.createObjectURL(new Blob(chunks,{type:mimeType})),a=document.createElement('a');a.href=url;a.download='nanoclaw-host-agent-loop.webm';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);status.textContent='Exported 1080 × 1920 video with sound.';restore()};finishRecording=()=>{playing=false;recording=false;rec.stop()};render(0);rec.start();prev=performance.now();syncAudio()};
+function frame(now){const delta=Math.min((now-prev)/1000,.1);prev=now;if(playing){time+=delta*speed;if(time>=DURATION){if(recording){time=DURATION-.019;render(time);finishRecording();return requestAnimationFrame(frame)}time%=DURATION;syncAudio()}}render(time);requestAnimationFrame(frame)}
+document.getElementById('export').onclick=async()=>{const btn=document.getElementById('export'),status=document.getElementById('export-status');if(!canvas.captureStream||!window.MediaRecorder){status.textContent='Video export is unavailable in this browser.';return}await initAudio();const formats=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];const mimeType=formats.find(f=>MediaRecorder.isTypeSupported(f));if(!mimeType){status.textContent='WebM export is unavailable in this browser.';return}const old={time,playing,speed,soundOn};stopAudio();time=0;speed=1;soundOn=true;playing=true;recording=true;btn.disabled=true;document.querySelectorAll('.transport button,#scrub,.transport select,#chapters button').forEach(x=>x.disabled=true);status.textContent='Recording picture + sound… 18 seconds';const stream=canvas.captureStream(30);recordDest.stream.getAudioTracks().forEach(track=>stream.addTrack(track));const rec=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:8000000,audioBitsPerSecond:192000});const chunks=[];rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};const restore=()=>{recording=false;stopAudio();stream.getVideoTracks().forEach(track=>track.stop());({time,playing,speed,soundOn}=old);document.querySelectorAll('.transport button,#scrub,.transport select,#chapters button').forEach(x=>x.disabled=false);btn.disabled=false;setPlaying(playing)};rec.onerror=()=>{status.textContent='Export failed. Please try again.';restore()};rec.onstop=()=>{const url=URL.createObjectURL(new Blob(chunks,{type:mimeType})),a=document.createElement('a');a.href=url;a.download='nanoclaw-host-agent-loop.webm';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);status.textContent='Exported 1080 × 1920 video with sound.';restore()};finishRecording=()=>{playing=false;recording=false;rec.stop()};render(0);rec.start();prev=performance.now();syncAudio()};
 setPlaying(playing);render(0);document.fonts.ready.then(()=>render(time));requestAnimationFrame(frame);
