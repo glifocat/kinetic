@@ -37,3 +37,7 @@ Local references: `references/caching-layers.mp4`, `references/agent-loop.mp4`, 
 - Design implication: let discrete events supply the rhythm, use pitch/duration to distinguish request, result and failure, and reserve a richer tonal resolution for success. The initial animation is much slower (30 seconds) than these roughly 9-second references.
 
 Measurements: `references/audio-analysis.json`; reproducible analysis: `python3 references/analyze_audio.py`. Transient detections are algorithmic maxima, not counts of individual sound effects. The current animation soundtrack remains the original first version; this follow-up does not claim it has been remixed from the analysis.
+
+## Credential boundary correction
+
+The desktop and portrait compositions now include the OneCLI credential proxy and external hosted model. The container node is labeled MODEL CLIENT. Each illustrated reasoning cycle routes its API request to the proxy, then provider, and returns a response before tool execution. The gold outbound segment marks credential injection; raw API keys remain outside the agent container. The sequence and durations are illustrative, not a packet-level protocol trace. Source: https://github.com/nanocoai/nanoclaw#what-it-supports

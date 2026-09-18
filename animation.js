@@ -2,7 +2,7 @@
 const canvas=document.getElementById('film');let g=canvas.getContext('2d');
 const C={bg:'#0a1017',blue:'#92bfff',mint:'#93e0cb',purple:'#bba6ff',white:'#e6eef6',muted:'#778b9f',line:'#2b4052',gold:'#e1c691'};
 const TAU=Math.PI*2,DURATION=30;
-const chapters=[{t:0,title:'Receive & route',detail:'The channel adapter hands a message to the host.',caption:['One message arrives.','The host finds its session.']},{t:5,title:'Write the inbox',detail:'The host persists the message to the session’s inbound.db.',caption:['The host writes the inbox.','The message survives the handoff.']},{t:9,title:'Wake the container',detail:'The host wakes the container. The agent polls its inbox.',caption:['An isolated container wakes.','The agent reads its message.']},{t:13,title:'Reason → act → observe',detail:'The model requests tools; the runtime executes them and returns results.',caption:['A tool result becomes new context.','That is what turns a model into an agent.']},{t:22,title:'Write & deliver',detail:'The agent writes outbound.db. The host delivers through the channel adapter.',caption:['The agent writes the outbox.','The host carries the answer home.']},{t:27,title:'Ready for the next message',detail:'The host keeps listening. The next message starts another cycle.',caption:['Host orchestrates. Agent executes.','Two mailboxes connect the loop.']}];
+const chapters=[{t:0,title:'Receive & route',detail:'The channel adapter hands a message to the host.',caption:['One message arrives.','The host finds its session.']},{t:5,title:'Write the inbox',detail:'The host persists the message to the session’s inbound.db.',caption:['The host writes the inbox.','The message survives the handoff.']},{t:9,title:'Wake the container',detail:'The host wakes the container. The agent polls its inbox.',caption:['An isolated container wakes.','The agent reads its message.']},{t:13,title:'Reason → act → observe',detail:'The model client calls the hosted model through OneCLI. The proxy injects credentials outside the container; the runtime executes returned tool calls.',caption:['OneCLI adds credentials outside the agent.','The hosted model returns the next action.']},{t:22,title:'Write & deliver',detail:'The agent writes outbound.db. The host delivers through the channel adapter.',caption:['The agent writes the outbox.','The host carries the answer home.']},{t:27,title:'Ready for the next message',detail:'The host keeps listening. The next message starts another cycle.',caption:['Host orchestrates. Agent executes.','Two mailboxes connect the loop.']}];
 let time=0,playing=!matchMedia('(prefers-reduced-motion: reduce)').matches,speed=1,prev=performance.now(),recording=false,lastChapter=-1;
 const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n)),ease=x=>{x=clamp(x);return x*x*(3-2*x)},phase=(t,a,b)=>clamp((t-a)/(b-a));
 function line(points,color=C.line,width=2,dash=[]){g.save();g.beginPath();points.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));g.strokeStyle=color;g.lineWidth=width;g.setLineDash(dash);g.stroke();g.restore()}
@@ -20,6 +20,8 @@ function database(x,y,label,count,color,active){box(x-94,y-81,188,164,8,active?c
 function render(t){g.clearRect(0,0,1080,1920);g.fillStyle=C.bg;g.fillRect(0,0,1080,1920);const grad=g.createRadialGradient(540,970,60,540,970,900);grad.addColorStop(0,'#14233466');grad.addColorStop(1,'#0a101700');g.fillStyle=grad;g.fillRect(0,0,1080,1920);g.fillStyle='#203144';for(let x=45;x<1080;x+=36)for(let y=70;y<1870;y+=36){g.globalAlpha=.32;g.fillRect(x,y,1.5,1.5)}g.globalAlpha=1;
 text('K I N E T I C   /   S Y S T E M S   I N   M O T I O N',540,130,16,C.muted);text('NanoClaw',540,206,70,C.white,'center','display');text('The host agent loop',540,278,41,C.mint,'center','display');text('ONE MESSAGE  →  ONE COMPLETE ROUND TRIP',540,332,17,C.muted);
 const s=chapters.reduce((a,c,i)=>t>=c.t?i:a,0),activeHost=t<9||t>24;box(382,378,316,43,22,C.line);dot(406,399,s===3?C.purple:C.mint,4);text(['RECEIVE & ROUTE','WRITE INBOUND','WAKE & READ','REASON · ACT · OBSERVE','WRITE & DELIVER','LISTENING AGAIN'][s],552,400,15,C.muted);
+// Keep room below the container for the external credential and model path.
+g.save();g.translate(97,130);g.scale(.82,.82);
 // Channel rail and message envelope.
 const top=[[540,512],[540,624]];line(top);chip(540,478,t>=26?'REPLY SENT':'CHAT APP',t<3||t>=26,C.mint);text('channel adapter',540,551,17,C.muted);packet(top,phase(t,1,3),C.mint);
 // Host rotor.
@@ -31,20 +33,23 @@ text('HOST WRITES',245,857,16,C.blue);text('HOST READS',835,857,16,C.mint);datab
 box(119,1210,842,402,20,t>=9&&t<25?'#516379':C.line,'#0c141e');g.save();g.setLineDash([6,8]);box(131,1222,818,378,15,C.line,'#0c141e');g.restore();box(364,1192,352,38,10,C.line);text('ISOLATED AGENT CONTAINER',540,1211,18,C.purple);text('BUN RUNTIME · AGENT SDK',540,1578,16,C.muted);
 const into=[[245,1159],[245,1329],[383,1329]],outof=[[697,1329],[835,1329],[835,1159]];line(into,C.line,2,[5,8]);line(outof,C.line,2,[5,8]);packet(into,phase(t,10,12),C.blue);packet(outof,phase(t,22,23.5),C.mint);
 text('POLL',245,1280,16,C.blue);text('WRITE',835,1280,16,C.mint);
-const mx=430,my=1371,tx=660,ty=1450;circle(mx,my,72,C.line);circle(mx,my,63,t>=12&&t<22?C.purple:C.line,2,'#171c30');text('MODEL',mx,my-9,22,C.purple);text('decide',mx,my+23,16,C.muted);circle(tx,ty,61,C.line);gear(tx,ty,49,-t*.6,C.mint,t>=13&&t<22);text('TOOLS',tx,ty+85,18,C.mint);
+const mx=430,my=1371,tx=660,ty=1450;circle(mx,my,72,C.line);circle(mx,my,63,t>=12&&t<22?C.purple:C.line,2,'#171c30');text('MODEL',mx,my-12,20,C.purple);text('CLIENT',mx,my+12,20,C.purple);text('SDK',mx,my+39,14,C.muted);circle(tx,ty,61,C.line);gear(tx,ty,49,-t*.6,C.mint,t>=13&&t<22);text('TOOLS',tx,ty+85,18,C.mint);
 const req=[[470,1316],[552,1281],[663,1311],[688,1389]],res=[[612,1491],[540,1515],[455,1487],[423,1443]];line(req,C.line,2,[5,7]);line(res,C.line,2,[5,7]);text('tool request',596,1261,14,C.purple);text('result → context',488,1541,14,C.mint);
-let tools=Math.min(3,Math.max(0,Math.floor((t-13)/3)));if(t>=13&&t<22){const p=((t-13)%3)/3;packet(req,phase(p,0,.43),C.purple);packet(res,phase(p,.5,.95),C.mint);const names=['READ FILE','RUN TOOL','CHECK RESULT'];box(718,1440,198,43,8,C.line);text(names[tools],817,1462,16,C.mint)}
+let tools=Math.min(3,Math.max(0,Math.floor((t-13)/3)));if(t>=13&&t<22){const p=((t-13)%3)/3;packet(req,phase(p,.5,.70),C.purple);packet(res,phase(p,.73,.98),C.mint);const names=['READ FILE','RUN TOOL','CHECK RESULT'];box(718,1440,198,43,8,C.line);text(names[tools],817,1462,16,C.mint)}
 // Context memory cells on the left.
 text('CONTEXT',245,1412,15,C.muted);for(let i=0;i<4;i++){box(177,1436+i*27,136,18,3,i<=tools&&t>=12?C.purple:C.line,i<=tools&&t>=12?'#bba6ff14':C.bg)}
 // Wake signal.
 if(t>=9&&t<11){g.save();g.globalAlpha=1-phase(t,9,11);const r=phase(t,9,11)*90;glow(()=>circle(540,1210,r,C.blue,2),C.blue);g.restore()}
 if(t>=26){packet([[835,746],[915,746],[915,478],[623,478]],phase(t,26,27.5),C.mint)}
+g.restore();
+credentialFlow(t,{client:[[390,1254],[150,1254],[150,1580],[200,1580]],proxy:[200,1520,310,120],provider:[680,1520,285,120],bridge:[[510,1580],[680,1580]]});
+text('OUTSIDE THE AGENT · RAW API KEYS STAY IN THE VAULT',540,1480,18,C.gold);
 const cap=chapters[s].caption;box(98,1680,884,126,23,C.line,'#0d151f');text(cap[0],540,1725,29,C.white,'center','display');text(cap[1],540,1769,25,C.muted,'center','display');text('HOST ORCHESTRATES',270,1850,16,C.blue);text('AGENT EXECUTES',809,1850,16,C.purple);line([[524,1840],[540,1850],[524,1860]],C.muted,2);line([[550,1840],[566,1850],[550,1860]],C.muted,2);g.fillStyle=C.mint;g.fillRect(0,1915,1080*t/30,5);
 if(s!==lastChapter){document.getElementById('stage-title').textContent=chapters[s].title;document.getElementById('stage-detail').textContent=chapters[s].detail;document.querySelectorAll('#chapters button').forEach((b,i)=>{b.classList.toggle('active',i===s);b.setAttribute('aria-current',i===s?'step':'false')});lastChapter=s}renderWide(t);document.getElementById('scrub').value=t;document.getElementById('clock').textContent=`00:${String(Math.floor(t)).padStart(2,'0')} / 00:30`;
 }
 // The web player uses a wide composition; video exports retain the portrait master.
 const viewer=document.getElementById('viewer');
-function renderWide(t){if(!viewer||matchMedia('(max-width: 800px)').matches)return;const portrait=g;g=viewer.getContext('2d');g.fillStyle=C.bg;g.fillRect(0,0,1440,1000);
+function renderWide(t){if(!viewer||matchMedia('(max-width: 800px)').matches)return;const portrait=g;g=viewer.getContext('2d');g.fillStyle=C.bg;g.fillRect(0,0,1440,1200);
 text('NanoClaw',72,76,44,C.white,'left','display');text('The host agent loop',72,123,25,C.mint,'left','display');text('ONE MESSAGE · TWO MAILBOXES',1368,83,18,C.muted,'right');
 const s=chapters.reduce((a,c,i)=>t>=c.t?i:a,0);text(['RECEIVE & ROUTE','WRITE INBOUND','WAKE & READ','REASON · ACT · OBSERVE','WRITE & DELIVER','LISTENING AGAIN'][s],1368,121,18,C.mint,'right');
 line([[72,165],[1368,165]],C.line);
@@ -54,15 +59,31 @@ const ip=[[392,480],[516,480],[516,339],[604,339]],op=[[604,673],[516,673],[516,
 database(698,338,'inbound.db',t>=6&&t<12?1:0,C.blue,t>=5&&t<13);database(698,672,'outbound.db',t>=23&&t<26?1:0,C.mint,t>=22&&t<27);text('HOST WRITES',698,220,20,C.blue);text('AGENT WRITES',698,555,20,C.mint);
 box(899,225,465,581,20,C.line,'#0c141e');text('ISOLATED AGENT',1132,264,23,C.purple);text('BUN RUNTIME · AGENT SDK',1132,298,17,C.muted);
 const inward=[[792,338],[972,338],[972,407],[1048,407]],outward=[[1048,716],[861,716],[861,672],[792,672]];line(inward,C.line,2,[6,8]);line(outward,C.line,2,[6,8]);packet(inward,phase(t,10,12),C.blue);packet(outward,phase(t,22,23.5),C.mint);
-circle(1116,407,66,t>=12&&t<22?C.purple:C.line,2,'#171c30');text('MODEL',1116,400,24,C.purple);text('decide',1116,433,18,C.muted);
+circle(1116,407,66,t>=12&&t<22?C.purple:C.line,2,'#171c30');text('MODEL',1116,393,22,C.purple);text('CLIENT',1116,420,22,C.purple);
 gear(1198,630,51,-t*.6,C.mint,t>=13&&t<22);text('TOOLS',1198,709,21,C.mint);
 const req=[[1180,407],[1297,452],[1297,560],[1237,590]],res=[[1147,637],[1048,637],[1003,549],[1078,461]];line(req,C.line,2,[5,7]);line(res,C.line,2,[5,7]);text('request',1296,491,18,C.purple);text('result',1030,580,18,C.mint);
-let n=Math.min(3,Math.max(0,Math.floor((t-13)/3)));if(t>=13&&t<22){const p=((t-13)%3)/3;packet(req,phase(p,0,.43),C.purple);packet(res,phase(p,.5,.95),C.mint);text(['READ FILE','RUN TOOL','CHECK RESULT'][n],1132,765,21,C.mint)}
+let n=Math.min(3,Math.max(0,Math.floor((t-13)/3)));if(t>=13&&t<22){const p=((t-13)%3)/3;packet(req,phase(p,.5,.70),C.purple);packet(res,phase(p,.73,.98),C.mint);text(['READ FILE','RUN TOOL','CHECK RESULT'][n],1132,765,21,C.mint)}
 for(let i=0;i<4;i++)box(927,670+i*25,97,17,3,i<=n&&t>=12?C.purple:C.line);text('context',975,782,18,C.muted);
 text('RECEIVED',185,752,18,C.muted);text(t<1?'00':'01',185,793,38,C.blue);text('DELIVERED',365,752,18,C.muted);text(t<27.5?'00':'01',365,793,38,C.mint);
 if(t>=26)packet([[280,399],[280,320]],phase(t,26,27.5),C.mint);
 if(t>=9&&t<11){g.save();g.globalAlpha=1-phase(t,9,11);circle(1132,265,phase(t,9,11)*80,C.blue);g.restore()}
-box(72,867,1296,84,18,C.line,'#0d151f');text(chapters[s].caption.join(' '),720,910,25,C.white,'center','display');g.fillStyle=C.mint;g.fillRect(0,996,1440*t/30,4);g=portrait;
+credentialFlow(t,{client:[[1182,407],[1390,407],[1390,937],[1240,937]],proxy:[940,877,300,120],provider:[500,877,280,120],bridge:[[940,937],[780,937]]});
+text('OUTSIDE THE AGENT',72,905,21,C.gold,'left');text('Raw API keys stay',72,947,20,C.muted,'left');text('in the vault.',72,977,20,C.muted,'left');
+box(72,1067,1296,84,18,C.line,'#0d151f');text(chapters[s].caption.join(' '),720,1110,25,C.white,'center','display');g.fillStyle=C.mint;g.fillRect(0,1196,1440*t/30,4);g=portrait;
+}
+// Credential injection is on the outbound API path, outside the agent container.
+function credentialFlow(t,{client,proxy,provider,bridge}){
+const active=t>=13&&t<22,p=active?((t-13)%3)/3:-1;
+line(client,C.line,2,[5,7]);line(bridge,C.line,2,[5,7]);
+const [x,y,w,h]=proxy,[px,py,pw,ph]=provider;
+box(x,y,w,h,14,active?C.gold:C.line,'#1b1914');
+text('OneCLI',x+w/2,y+27,26,C.gold,'center','display');
+text('CREDENTIAL PROXY',x+w/2,y+59,18,C.gold);
+text('policy · inject key',x+w/2,y+91,18,C.muted);
+box(px,py,pw,ph,14,active?C.purple:C.line,'#171c30');
+text('HOSTED MODEL',px+pw/2,py+35,24,C.purple);
+text('API provider',px+pw/2,py+77,20,C.muted);
+if(active){packet(client,phase(p,0,.14),C.purple);packet(bridge,phase(p,.14,.25),C.gold);packet([...bridge].reverse(),phase(p,.30,.40),C.purple);packet([...client].reverse(),phase(p,.40,.5),C.purple);if(p>.13&&p<.22)dot(x+w-18,y+18,C.gold,5);}
 }
 // Original sound score. All effects share the animation clock.
 let audioCtx,master,recordDest,audioSource,soundOn=false,scoreBuffer;
@@ -76,7 +97,7 @@ for(let i=0;i<L.length;i++){let t=i/sr,env=Math.min(1,t/1.5,(30-t)/1.5);const v=
 for(let t=.5;t<29.5;t+=.5)tone(t,.035,1800,.024,Math.sin(t)*.5,'noise');
 // Arrival, routing ticks, mailbox latch, wake, then request/result pairs.
 tone(1,.7,659.25,.19,-.3,'bell');tone(1.12,.7,987.77,.12,.3,'bell');for(let t=3;t<5;t+=.25)tone(t,.09,420,.08,-.3,'sine',180);tone(6,.24,140,.25,-.65,'sine',62);tone(6,.08,2000,.065,-.65,'noise');tone(9,1.1,110,.14,0,'sine',330);tone(12,.5,523.25,.13,-.3,'bell');
-for(let i=0;i<3;i++){let t=13+i*3;tone(t,.5,330+i*55,.13,-.25,'sine',700+i*110);tone(t+1.3,.055,1500,.12,.6,'noise');tone(t+1.5,.5,880+i*110,.12,.35,'bell');tone(t+2.8,.2,220,.1,-.4,'sine',110)}tone(23,.28,150,.22,.65,'sine',60);tone(24,.8,440,.10,.5,'sine',880);[523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(26+i*.11,1.3,f,.14,(i-1.5)*.22,'bell'));tone(28,.65,261.63,.08,0,'bell');return b}
+for(let i=0;i<3;i++){let t=13+i*3;tone(t,.5,330+i*55,.13,-.25,'sine',700+i*110);tone(t+.42,.07,1300,.075,.2,'noise');tone(t+1.5,.055,1500,.12,.6,'noise');tone(t+1.5,.5,880+i*110,.12,.35,'bell');tone(t+2.8,.2,220,.1,-.4,'sine',110)}tone(23,.28,150,.22,.65,'sine',60);tone(24,.8,440,.10,.5,'sine',880);[523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(26+i*.11,1.3,f,.14,(i-1.5)*.22,'bell'));tone(28,.65,261.63,.08,0,'bell');return b}
 async function initAudio(){if(!audioCtx){audioCtx=new AudioContext();master=audioCtx.createGain();master.gain.value=.8;master.connect(audioCtx.destination);recordDest=audioCtx.createMediaStreamDestination();master.connect(recordDest);scoreBuffer=makeScore(audioCtx)}await audioCtx.resume()}
 function stopAudio(){if(audioSource){audioSource.stop();audioSource.disconnect();audioSource=null}}
 function syncAudio(){stopAudio();if(audioCtx&&soundOn&&playing){audioSource=audioCtx.createBufferSource();audioSource.buffer=scoreBuffer;audioSource.playbackRate.value=speed;audioSource.connect(master);audioSource.start(0,Math.min(time,29.99))}}

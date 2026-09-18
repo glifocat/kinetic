@@ -18,7 +18,7 @@ To regenerate the MP4: `npm ci`, install FFmpeg, then `node scripts/render.cjs`.
 
 ## Architecture
 
-This depicts current NanoClaw’s mailbox architecture: channel adapter → host routing → per-session inbound.db → isolated agent runner → outbound.db → host delivery → channel. The model/tool exchange happens inside the agent container. Durations and example tool calls are illustrative. This is an explainer, not a running NanoClaw instance or a complete security model.
+This depicts current NanoClaw’s mailbox architecture: channel adapter → host routing → per-session inbound.db → isolated agent runner → outbound.db → host delivery → channel. The model client and tool execution live inside the agent container. Model API requests cross the boundary to OneCLI’s credential proxy, which injects credentials, and then to the external hosted model. Raw API keys remain outside the container. Durations and example tool calls are illustrative. This is an explainer, not a running NanoClaw instance or a complete security model.
 
 Sources:
 - https://github.com/nanocoai/nanoclaw#architecture
