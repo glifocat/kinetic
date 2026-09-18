@@ -21,7 +21,7 @@ function render(t){g.clearRect(0,0,1080,1920);g.fillStyle=C.bg;g.fillRect(0,0,10
 text('K I N E T I C   /   S Y S T E M S   I N   M O T I O N',540,130,16,C.muted);text('NanoClaw',540,206,70,C.white,'center','display');text('The host agent loop',540,278,41,C.mint,'center','display');text('ONE MESSAGE  →  ONE COMPLETE ROUND TRIP',540,332,17,C.muted);
 const s=chapters.reduce((a,c,i)=>t>=c.t?i:a,0),activeHost=t<9||t>24;box(382,378,316,43,22,C.line);dot(406,399,s===3?C.purple:C.mint,4);text(['RECEIVE & ROUTE','WRITE INBOUND','WAKE & READ','REASON · ACT · OBSERVE','WRITE & DELIVER','LISTENING AGAIN'][s],552,400,15,C.muted);
 // Keep room below the container for the external credential and model path.
-g.save();g.translate(97,130);g.scale(.82,.82);
+g.save();
 // Channel rail and message envelope.
 const top=[[540,512],[540,624]];line(top);chip(540,478,t>=26?'REPLY SENT':'CHAT APP',t<3||t>=26,C.mint);text('channel adapter',540,551,17,C.muted);packet(top,phase(t,1,3),C.mint);
 // Host rotor.
@@ -42,14 +42,14 @@ text('CONTEXT',245,1412,15,C.muted);for(let i=0;i<4;i++){box(177,1436+i*27,136,1
 if(t>=9&&t<11){g.save();g.globalAlpha=1-phase(t,9,11);const r=phase(t,9,11)*90;glow(()=>circle(540,1210,r,C.blue,2),C.blue);g.restore()}
 if(t>=26){packet([[835,746],[915,746],[915,478],[623,478]],phase(t,26,27.5),C.mint)}
 g.restore();
-credentialFlow(t,{client:[[390,1254],[150,1254],[150,1580],[200,1580]],proxy:[200,1520,310,120],provider:[680,1520,285,120],bridge:[[510,1580],[680,1580]]});
-text('OUTSIDE THE AGENT · RAW API KEYS STAY IN THE VAULT',540,1480,18,C.gold);
-const cap=chapters[s].caption;box(98,1680,884,126,23,C.line,'#0d151f');text(cap[0],540,1725,29,C.white,'center','display');text(cap[1],540,1769,25,C.muted,'center','display');text('HOST ORCHESTRATES',270,1850,16,C.blue);text('AGENT EXECUTES',809,1850,16,C.purple);line([[524,1840],[540,1850],[524,1860]],C.muted,2);line([[550,1840],[566,1850],[550,1860]],C.muted,2);g.fillStyle=C.mint;g.fillRect(0,1915,1080*t/30,5);
+credentialFlow(t,{client:[[358,1371],[88,1371],[88,1688],[180,1688]],proxy:[180,1640,330,96],provider:[680,1640,285,96],bridge:[[510,1688],[680,1688]]});
+text('RAW API KEYS STAY OUTSIDE THE AGENT',540,1753,17,C.gold);
+const cap=chapters[s].caption;box(98,1780,884,102,20,C.line,'#0d151f');text(cap[0],540,1814,28,C.white,'center','display');text(cap[1],540,1853,24,C.muted,'center','display');g.fillStyle=C.mint;g.fillRect(0,1915,1080*t/30,5);
 if(s!==lastChapter){document.getElementById('stage-title').textContent=chapters[s].title;document.getElementById('stage-detail').textContent=chapters[s].detail;document.querySelectorAll('#chapters button').forEach((b,i)=>{b.classList.toggle('active',i===s);b.setAttribute('aria-current',i===s?'step':'false')});lastChapter=s}renderWide(t);document.getElementById('scrub').value=t;document.getElementById('clock').textContent=`00:${String(Math.floor(t)).padStart(2,'0')} / 00:30`;
 }
 // The web player uses a wide composition; video exports retain the portrait master.
 const viewer=document.getElementById('viewer');
-function renderWide(t){if(!viewer||matchMedia('(max-width: 800px)').matches)return;const portrait=g;g=viewer.getContext('2d');g.fillStyle=C.bg;g.fillRect(0,0,1440,1200);
+function renderWide(t){if(!viewer||matchMedia('(max-width: 800px)').matches)return;const portrait=g;g=viewer.getContext('2d');g.fillStyle=C.bg;g.fillRect(0,0,1440,1000);
 text('NanoClaw',72,76,44,C.white,'left','display');text('The host agent loop',72,123,25,C.mint,'left','display');text('ONE MESSAGE · TWO MAILBOXES',1368,83,18,C.muted,'right');
 const s=chapters.reduce((a,c,i)=>t>=c.t?i:a,0);text(['RECEIVE & ROUTE','WRITE INBOUND','WAKE & READ','REASON · ACT · OBSERVE','WRITE & DELIVER','LISTENING AGAIN'][s],1368,121,18,C.mint,'right');
 line([[72,165],[1368,165]],C.line);
@@ -67,9 +67,9 @@ for(let i=0;i<4;i++)box(927,670+i*25,97,17,3,i<=n&&t>=12?C.purple:C.line);text('
 text('RECEIVED',185,752,18,C.muted);text(t<1?'00':'01',185,793,38,C.blue);text('DELIVERED',365,752,18,C.muted);text(t<27.5?'00':'01',365,793,38,C.mint);
 if(t>=26)packet([[280,399],[280,320]],phase(t,26,27.5),C.mint);
 if(t>=9&&t<11){g.save();g.globalAlpha=1-phase(t,9,11);circle(1132,265,phase(t,9,11)*80,C.blue);g.restore()}
-credentialFlow(t,{client:[[1182,407],[1390,407],[1390,937],[1240,937]],proxy:[940,877,300,120],provider:[500,877,280,120],bridge:[[940,937],[780,937]]});
-text('OUTSIDE THE AGENT',72,905,21,C.gold,'left');text('Raw API keys stay',72,947,20,C.muted,'left');text('in the vault.',72,977,20,C.muted,'left');
-box(72,1067,1296,84,18,C.line,'#0d151f');text(chapters[s].caption.join(' '),720,1110,25,C.white,'center','display');g.fillStyle=C.mint;g.fillRect(0,1196,1440*t/30,4);g=portrait;
+credentialFlow(t,{client:[[1182,407],[1390,407],[1390,869],[1260,869]],proxy:[960,827,300,84],provider:[550,827,280,84],bridge:[[960,869],[830,869]]});
+text('KEYS STAY OUTSIDE',72,855,20,C.gold,'left');text('Credentials injected at the proxy',72,887,18,C.muted,'left');
+box(72,934,1296,48,13,C.line,'#0d151f');text(chapters[s].caption.join(' '),720,959,22,C.white,'center','display');g.fillStyle=C.mint;g.fillRect(0,996,1440*t/30,4);g=portrait;
 }
 // Credential injection is on the outbound API path, outside the agent container.
 function credentialFlow(t,{client,proxy,provider,bridge}){
@@ -77,12 +77,12 @@ const active=t>=13&&t<22,p=active?((t-13)%3)/3:-1;
 line(client,C.line,2,[5,7]);line(bridge,C.line,2,[5,7]);
 const [x,y,w,h]=proxy,[px,py,pw,ph]=provider;
 box(x,y,w,h,14,active?C.gold:C.line,'#1b1914');
-text('OneCLI',x+w/2,y+27,26,C.gold,'center','display');
-text('CREDENTIAL PROXY',x+w/2,y+59,18,C.gold);
-text('policy · inject key',x+w/2,y+91,18,C.muted);
+text('OneCLI',x+w/2,y+20,24,C.gold,'center','display');
+text('CREDENTIAL PROXY',x+w/2,y+44,17,C.gold);
+text('policy · inject key',x+w/2,y+68,16,C.muted);
 box(px,py,pw,ph,14,active?C.purple:C.line,'#171c30');
-text('HOSTED MODEL',px+pw/2,py+35,24,C.purple);
-text('API provider',px+pw/2,py+77,20,C.muted);
+text('HOSTED MODEL',px+pw/2,py+28,22,C.purple);
+text('API provider',px+pw/2,py+59,18,C.muted);
 if(active){packet(client,phase(p,0,.14),C.purple);packet(bridge,phase(p,.14,.25),C.gold);packet([...bridge].reverse(),phase(p,.30,.40),C.purple);packet([...client].reverse(),phase(p,.40,.5),C.purple);if(p>.13&&p<.22)dot(x+w-18,y+18,C.gold,5);}
 }
 // Original sound score. All effects share the animation clock.
